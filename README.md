@@ -9,9 +9,24 @@ In this final project, you will implement the missing parts in the schematic. To
 2. Second, you will compute the TTC based on Lidar measurements. 
 3. You will then proceed to do the same using the camera, which requires to first associate keypoint matches to regions of interest and then to compute the TTC based on those matches. 
 4. And lastly, you will conduct various tests with the framework. Your goal is to identify the most suitable detector/descriptor combination for TTC estimation and also to search for problems that can lead to faulty measurements by the camera or Lidar sensor. In the last course of this Nanodegree, you will learn about the Kalman filter, which is a great way to combine the two independent TTC measurements into an improved version which is much more reliable than a single sensor alone can be. But before we think about such things, let us focus on your final project in the camera course. 
+Rubric
+## FP.1 Match 3D Objects
+Implement the method "matchBoundingBoxes", which takes as input both the previous and the current data frames and provides as output the ids of the matched regions of interest (i.e. the boxID property). Matches must be the ones with the highest number of keypoint correspondences.
+
+## FP.2 Compute Lidar-based TTC
+Compute the time-to-collision in second for all matched 3D objects using only Lidar measurements from the matched bounding boxes between current and previous frame.
+## FP.3 Associate Keypoint Correspondences with Bounding Boxes
+Prepare the TTC computation based on camera measurements by associating keypoint correspondences to the bounding boxes which enclose them. All matches which satisfy this condition must be added to a vector in the respective bounding box.
+## FP.4 Compute Camera-based TTC
+Compute the time-to-collision in second for all matched 3D objects using only keypoint correspondences from the matched bounding boxes between current and previous frame.
+## FP.5 Performance Evaluation 1
+Find examples where the TTC estimate of the Lidar sensor does not seem plausible. Describe your observations and provide a sound argumentation why you think this happened.
+
+## FP.6 Performance Evaluation 2
+Run several detector / descriptor combinations and look at the differences in TTC estimation. Find out which methods perform best and also include several examples where camera-based TTC estimation is way off. As with Lidar, describe your observations again and also look into potential reasons.
 
 | Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| 16-17| 17-18| 18-19| 
-| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: | :-------: |
 |HARRIS/BRISK|L: 12.516 s</br> C: 15.069 s|L: 12.614 s</br> C: 14.288 s|L: 14.091 s</br> C: 17.019 s|L: 16.689 s</br> C: 15.300 s|L: 15.908 s</br> C: 26.505 s|L: 12.679 s</br> C: 17.862 s|L: 11.984 s</br> C: 22.059 s|L: 13.124 s</br> C: 15.877 s|L: 13.024 s</br> C: 13.791 s|L: 11.175 s</br> C: 15.938 s|L: 12.809 s</br> C: 19.543 s|L: 8.960 s</br> C: 15.341 s|L: 9.964 s</br> C: 12.476 s|L: 9.599 s</br> C: 21.036 s|L: 8.574 s</br> C: 15.905 s|L: 9.516 s</br> C: 15.733 s|L: 9.547 s</br> C: 12.973 s|L: 8.399 s</br> C: 21.403 s|
 |HARRIS/BRIEF|L: 12.516 s</br> C: 13.972 s|L: 12.614 s</br> C: 26.975 s|L: 14.091 s</br> C: 18.840 s|L: 16.689 s</br> C: 16.628 s|L: 15.908 s</br> C: 23.092 s|L: 12.679 s</br> C: 22.324 s|L: 11.984 s</br> C: 26.815 s|L: 13.124 s</br> C: 20.493 s|L: 13.024 s</br> C: 16.754 s|L: 11.175 s</br> C: 18.594 s|L: 12.809 s</br> C: 15.489 s|L: 8.960 s</br> C: 14.201 s|L: 9.964 s</br> C: 18.219 s|L: 9.599 s</br> C: 21.822 s|L: 8.574 s</br> C: 22.449 s|L: 9.516 s</br> C: 16.449 s|L: 9.547 s</br> C: 20.433 s|L: 8.399 s</br> C: 45.479 s|
 |HARRIS/FREAK|L: 12.516 s</br> C: 18.153 s|L: 12.614 s</br> C: 16.638 s|L: 14.091 s</br> C: 15.216 s|L: 16.689 s</br> C: 15.710 s|L: 15.908 s</br> C: 20.762 s|L: 12.679 s</br> C: 18.666 s|L: 11.984 s</br> C: 36.011 s|L: 13.124 s</br> C: 20.703 s|L: 13.024 s</br> C: 17.795 s|L: 11.175 s</br> C: 13.604 s|L: 12.809 s</br> C: 14.773 s|L: 8.960 s</br> C: 14.153 s|L: 9.964 s</br> C: 11.617 s|L: 9.599 s</br> C: 14.705 s|L: 8.574 s</br> C: 15.618 s|L: 9.516 s</br> C: 17.665 s|L: 9.547 s</br> C: 23.603 s|L: 8.399 s</br> C: 18.003 s|

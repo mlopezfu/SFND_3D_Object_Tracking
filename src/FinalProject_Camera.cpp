@@ -124,7 +124,7 @@ for (int dt=0;dt<7;dt++)
     double sensorFrameRate = 10.0 / imgStepWidth; // frames per second for Lidar and camera
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
-    bool bVisTTC=false,bVisDetector=true,bVis3D = false,bVisYolo=true;//bVis = false,
+    bool bVisTTC=true,bVisDetector=false,bVis3D = false,bVisYolo=false,bVisDescriptor=false;//bVis = false,
     /* MAIN LOOP OVER ALL IMAGES */
 
     for (size_t imgIndex = 0; imgIndex <= imgEndIndex - imgStartIndex; imgIndex+=imgStepWidth)
@@ -149,8 +149,8 @@ for (int dt=0;dt<7;dt++)
 
         /* DETECT & CLASSIFY OBJECTS */
 
-        float confThreshold = 0.2;
-        float nmsThreshold = 0.4;        
+        float confThreshold = 0.4; // 0.2
+        float nmsThreshold = 0.6;  // 0.4      
         detectObjects((dataBuffer.end() - 1)->cameraImg, (dataBuffer.end() - 1)->boundingBoxes, confThreshold, nmsThreshold,
                       yoloBasePath, yoloClassesFile, yoloModelConfiguration, yoloModelWeights, bVisYolo);
 
@@ -176,7 +176,7 @@ for (int dt=0;dt<7;dt++)
         /* CLUSTER LIDAR POINT CLOUD */
 
         // associate Lidar points with camera-based ROI
-        float shrinkFactor = 0.10; // shrinks each bounding box by the given percentage to avoid 3D object merging at the edges of an ROI
+        float shrinkFactor = 0.30; // shrinks each bounding box by the given percentage to avoid 3D object merging at the edges of an ROI
         clusterLidarWithROI((dataBuffer.end()-1)->boundingBoxes, (dataBuffer.end() - 1)->lidarPoints, shrinkFactor, P_rect_00, R_rect_00, RT);
 
         // Visualize 3D objects
@@ -208,7 +208,7 @@ for (int dt=0;dt<7;dt++)
         string detectorType = detectorTypes[dt];
         double t = (double)cv::getTickCount();
         #else
-        string detectorType = detectorTypes[0];// 0 Harris
+        string detectorType = detectorTypes[5];// 0 Harris
         #endif
         if (detectorType.compare("SHITOMASI") == 0)
         {
@@ -253,7 +253,7 @@ for (int dt=0;dt<7;dt++)
         #ifdef createTableDetectors
         string descriptorType = descriptorTypes[desct];
         #else
-        string descriptorType = descriptorTypes[0];  //0 BRISK
+        string descriptorType = descriptorTypes[5];  //0 BRISK
         #endif
         //string descriptorTypes[]={"BRISK", "BRIEF", "FREAK",   "SIFT","ORB","AKAZE"};
         //string descriptorType = descriptorTypes[4]; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
@@ -296,6 +296,49 @@ for (int dt=0;dt<7;dt++)
             // store matches in current data frame
             (dataBuffer.end() - 1)->kptMatches = matches;
 
+            if (bVisDescriptor)
+            {
+                
+                
+                
+      
+
+                cv::Mat matchImg = ((dataBuffer.end() - 1)->cameraImg).clone();
+                cv::drawMatches((dataBuffer.end() - 2)->cameraImg, (dataBuffer.end() - 2)->keypoints,
+                                (dataBuffer.end() - 1)->cameraImg, (dataBuffer.end() - 1)->keypoints,
+                                matches, matchImg,
+                                cv::Scalar::all(-1), cv::Scalar::all(-1),
+                                vector<char>(), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+                string windowName = "Matching keypoints between two camera images";
+                cv::namedWindow(windowName, 7);
+                cv::Mat visImg = matchImg;
+                
+                for(auto it=(dataBuffer.end() - 1)->boundingBoxes.begin(); it!=(dataBuffer.end() - 1)->boundingBoxes.end(); ++it) {
+                    
+                    // Draw rectangle displaying the bounding box
+                    int top, left, width, height;
+                    top = (*it).roi.y;
+                    left = (*it).roi.x;
+                    width = (*it).roi.width;
+                    height = (*it).roi.height;
+                    cv::rectangle(visImg, cv::Point(left, top), cv::Point(left+width, top+height),cv::Scalar(0, 255, 0), 2);
+                    
+                    string label = cv::format("%.2f", (*it).confidence);
+                    label = "box";
+                
+                    // Display label at the top of the bounding box
+                    int baseLine;
+                    cv::Size labelSize = getTextSize(label, cv::FONT_ITALIC, 0.5, 1, &baseLine);
+                    top = max(top, labelSize.height);
+                    rectangle(visImg, cv::Point(left, top - round(1.5*labelSize.height)), cv::Point(left + round(1.5*labelSize.width), top + baseLine), cv::Scalar(255, 255, 255), cv::FILLED);
+                    cv::putText(visImg, label, cv::Point(left, top), cv::FONT_ITALIC, 0.75, cv::Scalar(0,0,0),1);
+                    
+                }
+                cv::imshow(windowName, visImg);
+                cout << "Press key to continue to next image" << endl;
+                cv::waitKey(0); // wait for key to be pressed
+            }
             cout << "#7 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
             

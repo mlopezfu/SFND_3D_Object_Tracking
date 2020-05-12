@@ -190,102 +190,30 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
 }
 
 
-// Helper function to sort lidar points based on their X (longitudinal) coordinate
-void sortLidarPointsX(std::vector<LidarPoint> &lidarPoints)
-{
-    // This std::sort with a lambda mutates lidarPoints, a vector of LidarPoint
-    std::sort(lidarPoints.begin(), lidarPoints.end(), [](LidarPoint a, LidarPoint b) {
-        return a.x < b.x;  // Sort ascending on the x coordinate only
-    });
-}
-
-
 // Compute time-to-collision (TTC) based on relevant lidar points
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
 {
-    // In each frame, take the median x-distance as our more robust estimate.
-    // If performance is suffering, consider taking the median of a random subset of the points.
-    sortLidarPointsX(lidarPointsPrev);
-    sortLidarPointsX(lidarPointsCurr);
-    double d0 = lidarPointsPrev[lidarPointsPrev.size()/2].x;
-    double d1 = lidarPointsCurr[lidarPointsCurr.size()/2].x;
+    double t = (double)cv::getTickCount();
 
-    // Using the constant-velocity model (as opposed to a constant-acceleration model)
-    // TTC = d1 * delta_t / (d0 - d1)
-    // where: d0 is the previous frame's closing distance (front-to-rear bumper)
-    //        d1 is the current frame's closing distance (front-to-rear bumper)
-    //        delta_t is the time elapsed between images (1 / frameRate)
-    // Note: this function does not take into account the distance from the lidar origin to the front bumper of our vehicle.
-    // It also does not account for the curvature or protrusions from the rear bumper of the preceding vehicle.
+    double d0;
+    for(auto punto:lidarPointsPrev)
+    {
+        d0+=punto.x;
+    }
+    d0=d0/lidarPointsPrev.size();
+    double d1;
+    for(auto punto:lidarPointsCurr)
+    {
+        d1+=punto.x;
+    }
+    d1=d1/lidarPointsCurr.size();
+
     TTC = d1 * (1.0 / frameRate) / (d0 - d1);
+    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+    cout << "TTC Lidar in " << 1000 * t / 1.0 << " ms" << endl;
 }
-
-
-void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
-{
-    // NOTE: After calling a cv::DescriptorMatcher::match function, each DMatch
-    // contains two keypoint indices, queryIdx and trainIdx, based on the order of image arguments to match.
-    // https://docs.opencv.org/4.1.0/db/d39/classcv_1_1DescriptorMatcher.html#a0f046f47b68ec7074391e1e85c750cba
-    // prevFrame.keypoints is indexed by queryIdx
-    // currFrame.keypoints is indexed by trainIdx
-
-    std::multimap<int, int> mmap {};
-    int maxPrevBoxID = 0;
-
-    for (auto match : matches) {
-        cv::KeyPoint prevKp = prevFrame.keypoints[match.queryIdx];
-        cv::KeyPoint currKp = currFrame.keypoints[match.trainIdx];
-        
-        int prevBoxID = -1;
-        int currBoxID = -1;
-
-        // For each bounding box in the previous frame
-        for (auto bbox : prevFrame.boundingBoxes) {
-            if (bbox.roi.contains(prevKp.pt)) prevBoxID = bbox.boxID;
-        }
-
-        // For each bounding box in the current frame
-        for (auto bbox : currFrame.boundingBoxes) {
-            if (bbox.roi.contains(currKp.pt)) currBoxID = bbox.boxID;
-        }
-        
-        // Add the containing boxID for each match to a multimap
-        mmap.insert({currBoxID, prevBoxID});
-
-        maxPrevBoxID = std::max(maxPrevBoxID, prevBoxID);
-    }
-
-    // Setup a list of boxID int values to iterate over in the current frame
-    vector<int> currFrameBoxIDs {};
-    for (auto box : currFrame.boundingBoxes) currFrameBoxIDs.push_back(box.boxID);
-
-    // Loop through each boxID in the current frame, and get the mode (most frequent value) of associated boxID for the previous frame.
-    for (int k : currFrameBoxIDs) {
-        // Count the greatest number of matches in the multimap, where each element is {key=currBoxID, val=prevBoxID}
-        // std::multimap::equal_range(k) returns the range of all elements matching key = k.
-        auto rangePrevBoxIDs = mmap.equal_range(k);
-
-        // Create a vector of counts (per current bbox) of prevBoxIDs
-        std::vector<int> counts(maxPrevBoxID + 1, 0);
-
-        // Accumulator loop
-        for (auto it = rangePrevBoxIDs.first; it != rangePrevBoxIDs.second; ++it) {
-            if (-1 != (*it).second) counts[(*it).second] += 1;
-        }
-
-        // Get the index of the maximum count (the mode) of the previous frame's boxID
-        int modeIndex = std::distance(counts.begin(), std::max_element(counts.begin(), counts.end()));
-
-        // Set the best matching bounding box map with
-        // key   = Previous frame's most likely matching boxID
-        // value = Current frame's boxID, k
-        bbBestMatches.insert({modeIndex, k});
-    }
-}
-
 /*
-
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
@@ -306,69 +234,55 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 {
     // ...
 }
-
-template<typename KeyType, typename ValueType>
-std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType>& x) {
-    using pairtype = std::pair<KeyType, ValueType>;
-    return *std::max_element(x.begin(), x.end(), [] (const pairtype & p1, const pairtype & p2) {
-        return p1.second < p2.second;
-    });
-}
-
+*/
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
+    double t = (double)cv::getTickCount();
 
-        std::multimap<int, int> mmap {};
+    std::multimap<int, int> mmap {};
     int maxPrevBoxID = 0;
 
-    for (auto match : matches) {
-        cv::KeyPoint prevKp = prevFrame.keypoints[match.queryIdx];
-        cv::KeyPoint currKp = currFrame.keypoints[match.trainIdx];
-        
-        int prevBoxID = -1;
-        int currBoxID = -1;
+    for (const auto& prevBox : prevFrame.boundingBoxes) {
+        std::map<int, int> m;
+        for (const auto& currBox : currFrame.boundingBoxes) {
 
-        // For each bounding box in the previous frame
-        for (auto bbox : prevFrame.boundingBoxes) {
-            if (bbox.roi.contains(prevKp.pt)) prevBoxID = bbox.boxID;
+
+            for (const auto &match : matches) {
+
+                const auto &prevKeyPoint = prevFrame.keypoints[match.queryIdx].pt;
+                if (prevBox.roi.contains(prevKeyPoint)) {
+                    const auto &currKeyPoint = currFrame.keypoints[match.trainIdx].pt;
+
+                    if (currBox.roi.contains(currKeyPoint)) {
+
+                        if(0 == m.count(currBox.boxID)) {
+                            m[currBox.boxID] = 1;
+                        }
+                        else {
+                            m[currBox.boxID]++;
+                        }
+                    }
+                }
+                //mmap.insert({currBoxID, prevBoxID});
+
+                //maxPrevBoxID = std::max(maxPrevBoxID, prevBoxID);
+            } // eof iterating all matches
+        } // eof iterating all current bounding boxes
+        map<int,int>::iterator it;
+        int maximo=0;
+        int boxId=-1;
+        for (it=m.begin();it!=m.end();it++)
+        {
+            if(it->second>maximo)
+            {
+                maximo=it->second;
+                boxId=it->first;
+            }
         }
 
-        // For each bounding box in the current frame
-        for (auto bbox : currFrame.boundingBoxes) {
-            if (bbox.roi.contains(currKp.pt)) currBoxID = bbox.boxID;
-        }
-        
-        // Add the containing boxID for each match to a multimap
-        mmap.insert({currBoxID, prevBoxID});
+        bbBestMatches[prevBox.boxID] = boxId;
 
-        maxPrevBoxID = std::max(maxPrevBoxID, prevBoxID);
-    }
-
-    // Setup a list of boxID int values to iterate over in the current frame
-    vector<int> currFrameBoxIDs {};
-    for (auto box : currFrame.boundingBoxes) currFrameBoxIDs.push_back(box.boxID);
-
-    // Loop through each boxID in the current frame, and get the mode (most frequent value) of associated boxID for the previous frame.
-    for (int k : currFrameBoxIDs) {
-        // Count the greatest number of matches in the multimap, where each element is {key=currBoxID, val=prevBoxID}
-        // std::multimap::equal_range(k) returns the range of all elements matching key = k.
-        auto rangePrevBoxIDs = mmap.equal_range(k);
-
-        // Create a vector of counts (per current bbox) of prevBoxIDs
-        std::vector<int> counts(maxPrevBoxID + 1, 0);
-
-        // Accumulator loop
-        for (auto it = rangePrevBoxIDs.first; it != rangePrevBoxIDs.second; ++it) {
-            if (-1 != (*it).second) counts[(*it).second] += 1;
-        }
-
-        // Get the index of the maximum count (the mode) of the previous frame's boxID
-        int modeIndex = std::distance(counts.begin(), std::max_element(counts.begin(), counts.end()));
-
-        // Set the best matching bounding box map with
-        // key   = Previous frame's most likely matching boxID
-        // value = Current frame's boxID, k
-        bbBestMatches.insert({modeIndex, k});
-    }
+    } // eof iterating all previous bounding boxes
+    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+    cout << "matchBoundingBoxes in " << 1000 * t / 1.0 << " ms" << endl;
 }
-*/

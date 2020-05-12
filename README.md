@@ -12,9 +12,27 @@ In this final project, you will implement the missing parts in the schematic. To
 Rubric
 ## FP.1 Match 3D Objects
 Implement the method "matchBoundingBoxes", which takes as input both the previous and the current data frames and provides as output the ids of the matched regions of interest (i.e. the boxID property). Matches must be the ones with the highest number of keypoint correspondences.
+This function is declared in camFusion.hpp as 
+void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame);
+So we need 2 dataframes and a collection of matches, so Yolo and key point and descriptor detection must be performed.
+
+First we perform Yolo detection, then a set of bounding boxes are created and stored in DataFrame structure:
+<img src="images/yolo_0.png" width="779" />
+After that, a set of keypoints and descriptors are detected in the images.
+<img src="images/keypoints.png" width="779" />
+And we try to identify each bounding box between images.
+<img src="images/bbBoxAndKeyPoints.png" width="779" />
+So we make this call
+map<int, int> bbBestMatches;
+matchBoundingBoxes(matches, bbBestMatches, *(dataBuffer.end()-2), *(dataBuffer.end()-1));
+
 
 ## FP.2 Compute Lidar-based TTC
 Compute the time-to-collision in second for all matched 3D objects using only Lidar measurements from the matched bounding boxes between current and previous frame.
+This function is declared in camFusion.hpp
+void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC); 
+So we need the LIDAR data from the previous frame, the LIDAR data from the actual frame and the time between frames, so we can calculate TTC.
+In each point 
 ## FP.3 Associate Keypoint Correspondences with Bounding Boxes
 Prepare the TTC computation based on camera measurements by associating keypoint correspondences to the bounding boxes which enclose them. All matches which satisfy this condition must be added to a vector in the respective bounding box.
 ## FP.4 Compute Camera-based TTC

@@ -18,10 +18,13 @@ So we need 2 dataframes and a collection of matches, so Yolo and key point and d
 
 First we perform Yolo detection, then a set of bounding boxes are created and stored in DataFrame structure:
 <img src="images/yolo_0.png" width="779" />
+
 After that, a set of keypoints and descriptors are detected in the images.
 <img src="images/keypoints.png" width="779" />
+
 And we try to identify each bounding box between images.
 <img src="images/bbBoxAndKeyPoints.png" width="779" />
+
 So we make this call
 map<int, int> bbBestMatches;
 matchBoundingBoxes(matches, bbBestMatches, *(dataBuffer.end()-2), *(dataBuffer.end()-1));
@@ -32,7 +35,22 @@ Compute the time-to-collision in second for all matched 3D objects using only Li
 This function is declared in camFusion.hpp
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC); 
 So we need the LIDAR data from the previous frame, the LIDAR data from the actual frame and the time between frames, so we can calculate TTC.
-In each point 
+We have a lot of LIDAR DATA, but not all the data will be needed.
+<img src="images/LIDAR_ceiling_wo_cropping.png" width="779" />
+
+<img src="images/LIDAR_front_wo_cropping.png" width="779" />
+So we perform a cropping of the data, so only a small subset of point in the area of interest are used.
+
+<img src="images/LIDAR_ceiling.png" width="779" />
+
+<img src="images/LIDAR_front.png" width="779" />
+After that, we can calculate the distance in the X coordinate.
+In the first frame, the X will be d0 and in the last frame X will be d1.
+<img src="https://video.udacity-data.com/topher/2019/April/5cbf582d_draggedimage/draggedimage.png" width="779" />
+We will take all the X points and divide between the number of points. 
+After that, we can solve TTC in that equation.(3)
+<img src="https://video.udacity-data.com/topher/2019/April/5cbf5862_draggedimage-1/draggedimage-1.png" width="779" />
+
 ## FP.3 Associate Keypoint Correspondences with Bounding Boxes
 Prepare the TTC computation based on camera measurements by associating keypoint correspondences to the bounding boxes which enclose them. All matches which satisfy this condition must be added to a vector in the respective bounding box.
 ## FP.4 Compute Camera-based TTC

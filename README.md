@@ -70,8 +70,8 @@ There are a #define createTableDetectors that when defined, run all posible comb
 
 And the following table give the results for LIDAR
 
-| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| Deviation| 
-| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | 
+| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| 16-17|17-18|18-19|Deviation| 
+| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |  :--: | 
 | LIDAR |12.499 |12.811 |17.633 |14.143 |12.595 |13.585 |13.618 |13.232 |12.459 |12.331 |11.477 |10.212 |9.242 |9.517 |8.410 |8.815 |11.365 |8.425 | - |
 
 It seems that the ego car is braking, so the ttc must be going down, but in frames 03-05 is going up and also in frame 14-15.
@@ -82,8 +82,8 @@ I cant find any reason, but it can be because as the front car moves closer we a
 Run several detector / descriptor combinations and look at the differences in TTC estimation. Find out which methods perform best and also include several examples where camera-based TTC estimation is way off. As with Lidar, describe your observations again and also look into potential reasons.
 As told before, after define #define createTableDetectors the program is run and the following table is generated:
 
-| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| Deviation| 
-| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | 
+| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| 16-17|17-18|18-19|Deviation| 
+| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |  :--: | 
 | LIDAR |12.499 |12.811 |17.633 |14.143 |12.595 |13.585 |13.618 |13.232 |12.459 |12.331 |11.477 |10.212 |9.242 |9.517 |8.410 |8.815 |11.365 |8.425 | - |
 |HARRIS/BRISK|0.788 |-12.571 |-160.076 |-2.286 |-491.338 |-0.715 |-12.573 |-18.924 |nan |-inf |5.685 |0.681 |73.308 |-1.817 |-9.461 |-8.570 |0.950 |-inf |nan|
 |HARRIS/BRIEF|0.788 |7.129 |-41.563 |-2.286 |26.167 |76.011 |23.895 |7.090 |-9.158 |-25.223 |5.685 |0.681 |-11.215 |-3.911 |-30.770 |-1.397 |0.730 |-inf |inf|

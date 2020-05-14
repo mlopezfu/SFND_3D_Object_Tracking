@@ -143,23 +143,26 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
         }
     }
     double mean = sum / boundingBox.kptMatches.size();
-    //cout << "size before erase " << boundingBox.kptMatches.size() << endl;
+    cout << "size before erase " << boundingBox.kptMatches.size() << endl;
     constexpr double ratio = 1.25;
     int borradosMas=0,borradosMenos=0;
-    for (auto it = boundingBox.kptMatches.begin(); it < boundingBox.kptMatches.end();) {
-        cv::KeyPoint kpCurr = kptsCurr.at(it->trainIdx);
-        cv::KeyPoint kpPrev = kptsPrev.at(it->queryIdx);
-        double dist = cv::norm(kpCurr.pt - kpPrev.pt);
+    if(boundingBox.kptMatches.size()>50)
+    {
+        for (auto it = boundingBox.kptMatches.begin(); it < boundingBox.kptMatches.end();) {
+            cv::KeyPoint kpCurr = kptsCurr.at(it->trainIdx);
+            cv::KeyPoint kpPrev = kptsPrev.at(it->queryIdx);
+            double dist = cv::norm(kpCurr.pt - kpPrev.pt);
 
-        if (dist >= mean * ratio){// || ) {
-            boundingBox.kptMatches.erase(it);
-            borradosMas++;
-        }
-        else {
-            it++;
+            if (dist >= mean * ratio){// || ) {
+                boundingBox.kptMatches.erase(it);
+                borradosMas++;
+            }
+            else {
+                it++;
+            }
         }
     }
-    //cout << "size " << boundingBox.kptMatches.size() << " Mas " << borradosMas << " Menos " << borradosMenos << endl;
+    cout << "size " << boundingBox.kptMatches.size() << " Mas " << borradosMas << " Menos " << borradosMenos << endl;
 }
 
 // Compute time-to-collision (TTC) based on keypoint correspondences in successive images
@@ -167,19 +170,28 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
     vector<double> distRatios;
+    double medianRatio=0;
     for (auto it1 = kptMatches.begin(); it1 != kptMatches.end() - 1; ++it1) {
+        cv::KeyPoint kpOuterCurr = kptsCurr.at(it1->trainIdx);
+        cv::KeyPoint kpOuterPrev = kptsPrev.at(it1->queryIdx);
         for (auto it2 = kptMatches.begin() + 1; it2 != kptMatches.end(); ++it2) {
-            double distCurr = cv::norm(kptsCurr.at(it1->trainIdx).pt - kptsCurr.at(it2->trainIdx).pt);
-            double distPrev = cv::norm(kptsPrev.at(it1->queryIdx).pt - kptsPrev.at(it2->queryIdx).pt);
+            //double distCurr = cv::norm(kptsCurr.at(it1->trainIdx).pt - kptsCurr.at(it2->trainIdx).pt);
+            //double distPrev = cv::norm(kptsPrev.at(it1->queryIdx).pt - kptsPrev.at(it2->queryIdx).pt);
+            cv::KeyPoint kpInnerCurr = kptsCurr.at(it2->trainIdx);
+            cv::KeyPoint kpInnerPrev = kptsPrev.at(it2->queryIdx);
+            
+            double minDist = 60;  
+            double distCurr = cv::norm(kpOuterCurr.pt - kpInnerCurr.pt);
+            double distPrev = cv::norm(kpOuterPrev.pt - kpInnerPrev.pt);
             //cout << "distCurr " << distCurr << " distPrev " << distPrev << endl;
-            double minDist = 100.0;  
-
             // Avoid division by zero and apply the threshold
-            if (distPrev >= minDist && distCurr >= minDist) {
+            if (distPrev > std::numeric_limits<double>::epsilon() && distCurr >= minDist) {
                 
                 double distRatio = distCurr / distPrev;
-              //  cout << "distCurr " << distCurr << " distPrev " << distPrev << " distratio "<< distRatio <<  endl;
+                //cout << "distCurr " << distCurr << " distPrev " << distPrev << " distratio "<< distRatio <<  endl;
+                //if(distRatio!=1)
                 distRatios.push_back(distRatio);
+                medianRatio+=distRatio;
             }
         }
     }
@@ -192,11 +204,13 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
     }
 
     // As with computeTTCLidar, use the median as a reasonable method of excluding outliers
-    std::sort(distRatios.begin(), distRatios.end());
-    double medianDistRatio = distRatios[distRatios.size() / 2];
+    //std::sort(distRatios.begin(), distRatios.end());
+    
+    double medianDistRatio = medianRatio/distRatios.size();//distRatios[distRatios.size() / 2];
 
     // Finally, calculate a TTC estimate based on these 2D camera features
     TTC = (-1.0 / frameRate) / (1 - medianDistRatio);
+    cout << "TTC " << TTC << " frameRate " << frameRate << " medianDistRatio "<< medianDistRatio <<  endl;
 }
 
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,

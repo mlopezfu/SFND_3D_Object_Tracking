@@ -21,7 +21,7 @@
 #include "camFusion.hpp"
 
 using namespace std;
-#define createTableDetectors 
+//#define createTableDetectors 
 /* MAIN PROGRAM */
 int main(int argc, const char *argv[])
 {
@@ -31,11 +31,11 @@ int main(int argc, const char *argv[])
 #ifdef createTableDetectors
     string detectorsTable="| Detectors | 01   | 02   | 03   | 04   | 05   | 06   | 07   | 08   | 09   | 10   |Total |\r\n| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |\r\n";
     string detDescTable="| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| \r\n| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |\r\n";
-    string ttcTable="",ttcTableHeader="| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| 16-17| 17-18| 18-19| \r\n";
-    ttcTableHeader+="| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |\n";
+    string ttcTable="",ttcTableHeader="| Det/Desc | 01-02   | 02-03   | 03-04   | 04-05   | 05-06   | 06-07   | 07-08   | 08-09   | 09-10| 10-11| 11-12| 12-13| 13-14| 14-15| 15-16| Deviation| \r\n";
+    ttcTableHeader+="| :-------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | \n";
     string ttcLidarRow="";
     string detDescTableTime="| Det/Desc |Total Matching/Total Time |Ratio |\r\n| :-------: | :--: | :--: |\r\n";
-    
+    double totalFailureTTC=0;
     int detectorsTotal=0;
     int detDescTotal=0;
     double detDescTimeTotal=0;
@@ -69,7 +69,8 @@ for (int dt=0;dt<7;dt++)
         detDescTable+="\n\r";
         detDescTotal=0;
         detDescTimeTotal=0;
-        ttcTable+="\n";
+        ttcTable+=to_string(totalFailureTTC)+"|\n";
+        totalFailureTTC=0;
     }
     detDescTable+="|"+detectorTypes[dt]+"/"+descriptorTypes[desct]+"|"; 
     detDescTableTime+="|"+detectorTypes[dt]+"/"+descriptorTypes[desct]+"|";
@@ -149,8 +150,8 @@ for (int dt=0;dt<7;dt++)
 
         /* DETECT & CLASSIFY OBJECTS */
 
-        float confThreshold = 0.4; // 0.2
-        float nmsThreshold = 0.6;  // 0.4      
+        float confThreshold = 0.2; // 0.2
+        float nmsThreshold = 0.4;  // 0.4      
         detectObjects((dataBuffer.end() - 1)->cameraImg, (dataBuffer.end() - 1)->boundingBoxes, confThreshold, nmsThreshold,
                       yoloBasePath, yoloClassesFile, yoloModelConfiguration, yoloModelWeights, bVisYolo);
 
@@ -176,7 +177,7 @@ for (int dt=0;dt<7;dt++)
         /* CLUSTER LIDAR POINT CLOUD */
 
         // associate Lidar points with camera-based ROI
-        float shrinkFactor = 0.30; // shrinks each bounding box by the given percentage to avoid 3D object merging at the edges of an ROI
+        float shrinkFactor = 0.20; // shrinks each bounding box by the given percentage to avoid 3D object merging at the edges of an ROI
         clusterLidarWithROI((dataBuffer.end()-1)->boundingBoxes, (dataBuffer.end() - 1)->lidarPoints, shrinkFactor, P_rect_00, R_rect_00, RT);
 
         // Visualize 3D objects
@@ -413,6 +414,7 @@ for (int dt=0;dt<7;dt++)
                          cout << "TTC Lidar : "<< ttcLidar <<" s, TTC Camera : " << ttcCamera <<" s" << endl;
                     }
                     #ifdef createTableDetectors 
+                    totalFailureTTC+=abs(ttcCamera-ttcLidar);
                     stringstream ttcLidarRounded,ttcCameraRounded;
                     ttcLidarRounded << setprecision(3)<< fixed<< ttcLidar;
                     ttcCameraRounded << setprecision(3)<< fixed<< ttcCamera-ttcLidar;
@@ -443,10 +445,10 @@ for (int dt=0;dt<7;dt++)
     descriptorResults.open("resultadosDescriptores.txt");
     descriptorResults << detDescTable << "\n\r" << detDescTableTime;
     descriptorResults.close();
-    ttcTable+="\n\r";
+    ttcTable+=to_string(totalFailureTTC)+"|\n";
     ofstream ttcResults;
     ttcResults.open("resultadosTTC.txt");
-    ttcResults << ttcTableHeader << ttcLidarRow << "\n"<< ttcTable << "\n\r";
+    ttcResults << ttcTableHeader << ttcLidarRow  << " - |\n"<< ttcTable << "\n\r";
     ttcResults.close();
 #endif
     return 0;
